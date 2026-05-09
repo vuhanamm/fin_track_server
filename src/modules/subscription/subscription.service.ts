@@ -11,28 +11,40 @@ export async function verifyAndUpgrade(
   productId: string,
   packageName: string
 ) {
-  const result = await verifySubscriptionPurchase(
-    packageName,
-    productId,
-    purchaseToken
-  )
+  let result
+  try {
+    result = await verifySubscriptionPurchase(packageName, productId, purchaseToken)
+  } catch (err) {
+    console.error('[subscription] Google Play verify error:', err)
+    return { success: false, reason: 'GOOGLE_PLAY_ERROR' }
+  }
 
   if (!result.isValid || !result.expiresAt) {
     return { success: false, reason: 'INVALID_PURCHASE' }
   }
 
-  await prisma.user.update({
-    where: { firebase_uid: firebaseUid },
-    data: {
-      plan: 'premium',
-      plan_expires_at: result.expiresAt,
-      purchase_token: purchaseToken,
-      updated_at: new Date(),
-    },
-  })
+  try {
+    await prisma.user.update({
+      where: { firebase_uid: firebaseUid },
+      data: {
+        plan: 'premium',
+        plan_expires_at: result.expiresAt,
+        purchase_token: purchaseToken,
+        updated_at: new Date(),
+      },
+    })
+  } catch (err) {
+    console.error('[subscription] DB update error:', err)
+    return { success: false, reason: 'DATABASE_ERROR' }
+  }
 
-  // Acknowledge bắt buộc — nếu không Google tự refund sau 3 ngày
-  await acknowledgePurchase(packageName, productId, purchaseToken)
+  // Acknowledge bắt buộc — nếu không Google tự refund sau 3 ngày.
+  // Nếu fail thì vẫn trả success vì user đã trả tiền và DB đã cập nhật.
+  try {
+    await acknowledgePurchase(packageName, productId, purchaseToken)
+  } catch (err) {
+    console.error('[subscription] Google Play acknowledge error (non-fatal):', err)
+  }
 
   return {
     success: true,
@@ -45,10 +57,16 @@ export async function getSubscriptionStatus(
   prisma: PrismaClient,
   firebaseUid: string
 ) {
-  const user = await prisma.user.findUnique({
-    where: { firebase_uid: firebaseUid },
-    select: { plan: true, plan_expires_at: true },
-  })
+  let user
+  try {
+    user = await prisma.user.findUnique({
+      where: { firebase_uid: firebaseUid },
+      select: { plan: true, plan_expires_at: true },
+    })
+  } catch (err) {
+    console.error('[subscription] DB findUnique error:', err)
+    return { plan: 'free', plan_expires_at: null, is_active: false }
+  }
 
   if (!user) {
     return { plan: 'free', plan_expires_at: null, is_active: false }

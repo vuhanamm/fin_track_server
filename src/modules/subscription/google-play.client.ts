@@ -8,7 +8,12 @@ function getAuthClient() {
     throw new Error('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON env var is required')
   }
 
-  const credentials = JSON.parse(serviceAccountJson)
+  let credentials
+  try {
+    credentials = JSON.parse(serviceAccountJson)
+  } catch {
+    throw new Error('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not valid JSON')
+  }
   return new google.auth.GoogleAuth({
     credentials,
     scopes: ['https://www.googleapis.com/auth/androidpublisher'],
