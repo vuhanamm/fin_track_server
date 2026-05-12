@@ -24,17 +24,23 @@ export async function verifyAndUpgrade(
   }
 
   try {
-    await prisma.user.update({
+    await prisma.user.upsert({
       where: { firebase_uid: firebaseUid },
-      data: {
+      update: {
         plan: 'premium',
         plan_expires_at: result.expiresAt,
         purchase_token: purchaseToken,
         updated_at: new Date(),
       },
+      create: {
+        firebase_uid: firebaseUid,
+        plan: 'premium',
+        plan_expires_at: result.expiresAt,
+        purchase_token: purchaseToken,
+      },
     })
   } catch (err) {
-    console.error('[subscription] DB update error:', err)
+    console.error('[subscription] DB upsert error:', err)
     return { success: false, reason: 'DATABASE_ERROR' }
   }
 
