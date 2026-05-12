@@ -1,16 +1,12 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { PrismaClient } from '@prisma/client'
 
-interface ServerWithDeps {
-  prisma: PrismaClient
-  user: { uid: string }
-}
-
 export async function premiumGuard(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
-  const { prisma, user } = request.server as unknown as ServerWithDeps
+  const { prisma } = request.server as unknown as { prisma: PrismaClient }
+  const user = request.user
 
   let dbUser
   try {
