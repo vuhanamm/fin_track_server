@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 
-const ALERT_TO = 'vund.0709@gmail.com'
+const ALERT_TO = 'vund.draft@gmail.com'
 
 function createTransport() {
   const user = process.env.MAIL_USER
