@@ -43,8 +43,9 @@ export async function verifySubscriptionPurchase(
 
   const data = response.data
   const expiryMs = data.expiryTimeMillis ? parseInt(data.expiryTimeMillis) : null
+  // paymentState: 1 = payment received, 2 = free trial — cả hai đều hợp lệ
   const isValid =
-    data.paymentState === 1 && // 1 = payment received
+    (data.paymentState === 1 || data.paymentState === 2) &&
     expiryMs !== null &&
     expiryMs > Date.now()
 
