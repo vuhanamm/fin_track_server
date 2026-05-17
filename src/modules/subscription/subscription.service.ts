@@ -3,6 +3,7 @@ import {
   verifySubscriptionPurchase,
   acknowledgePurchase,
 } from './google-play.client'
+import { sendErrorAlert } from '../../shared/mailer'
 
 export async function verifyAndUpgrade(
   prisma: PrismaClient,
@@ -15,11 +16,22 @@ export async function verifyAndUpgrade(
   try {
     result = await verifySubscriptionPurchase(packageName, productId, purchaseToken)
   } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err)
     console.error('[subscription] Google Play verify error:', err)
+    sendErrorAlert(
+      'Google Play verify thất bại',
+      `uid: ${firebaseUid}\nproductId: ${productId}\npackageName: ${packageName}\ntoken: ${purchaseToken.slice(0, 30)}…\n\nLỗi:\n${detail}`
+    )
     return { success: false, reason: 'GOOGLE_PLAY_ERROR' }
   }
 
   if (!result.isValid || !result.expiresAt) {
+    const detail = `paymentState hoặc expiryDate không hợp lệ — isValid=${result.isValid} expiresAt=${result.expiresAt} orderId=${result.orderId}`
+    console.error('[subscription] Invalid purchase:', detail)
+    sendErrorAlert(
+      'Purchase không hợp lệ (INVALID_PURCHASE)',
+      `uid: ${firebaseUid}\nproductId: ${productId}\ntoken: ${purchaseToken.slice(0, 30)}…\n\n${detail}`
+    )
     return { success: false, reason: 'INVALID_PURCHASE' }
   }
 
@@ -40,7 +52,12 @@ export async function verifyAndUpgrade(
       },
     })
   } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err)
     console.error('[subscription] DB upsert error:', err)
+    sendErrorAlert(
+      'DB upsert thất bại (DATABASE_ERROR)',
+      `uid: ${firebaseUid}\ntoken: ${purchaseToken.slice(0, 30)}…\n\nLỗi:\n${detail}`
+    )
     return { success: false, reason: 'DATABASE_ERROR' }
   }
 
