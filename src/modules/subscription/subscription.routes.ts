@@ -35,7 +35,7 @@ export async function subscriptionRoutes(fastify: FastifyInstance) {
       )
 
       if (!result.success) {
-        reply.code(400).send({ error: result.reason })
+        reply.code(400).send({ error: result.reason, detail: result.detail })
         return
       }
 

@@ -22,17 +22,17 @@ export async function verifyAndUpgrade(
       'Google Play verify thất bại',
       `uid: ${firebaseUid}\nproductId: ${productId}\npackageName: ${packageName}\ntoken: ${purchaseToken.slice(0, 30)}…\n\nLỗi:\n${detail}`
     )
-    return { success: false, reason: 'GOOGLE_PLAY_ERROR' }
+    return { success: false, reason: 'GOOGLE_PLAY_ERROR', detail }
   }
 
   if (!result.isValid || !result.expiresAt) {
-    const detail = `paymentState hoặc expiryDate không hợp lệ — isValid=${result.isValid} expiresAt=${result.expiresAt} orderId=${result.orderId}`
+    const detail = `isValid=${result.isValid} expiresAt=${result.expiresAt} orderId=${result.orderId}`
     console.error('[subscription] Invalid purchase:', detail)
     sendErrorAlert(
       'Purchase không hợp lệ (INVALID_PURCHASE)',
       `uid: ${firebaseUid}\nproductId: ${productId}\ntoken: ${purchaseToken.slice(0, 30)}…\n\n${detail}`
     )
-    return { success: false, reason: 'INVALID_PURCHASE' }
+    return { success: false, reason: 'INVALID_PURCHASE', detail }
   }
 
   try {
