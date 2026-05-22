@@ -1,4 +1,4 @@
-import { generateContent, generateContentWithImage } from './gemini.client'
+import { generateContent, generateContentWithImage } from './ai.provider'
 
 interface Transaction {
   amount: number
