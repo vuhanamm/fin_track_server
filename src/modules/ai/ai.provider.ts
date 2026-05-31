@@ -1,6 +1,16 @@
-import { generateContent as geminiText, generateContentWithImage as geminiImage } from './gemini.client'
-import { generateContent as groqText } from './groq.client'
+import {
+  generateContent as geminiText,
+  generateContentWithImage as geminiImage,
+  generateContentPro as geminiProText,
+  generateContentWithImagePro as geminiProImage,
+} from './gemini.client'
+import { createGroqProvider } from './groq.client'
 import { generateContent as cerebrasText } from './cerebras.client'
+
+const groq1 = createGroqProvider('GROQ_API_KEY')
+const groq2 = createGroqProvider('GROQ_API_KEY_2')
+const groq3 = createGroqProvider('GROQ_API_KEY_3')
+const groq4 = createGroqProvider('GROQ_API_KEY_4')
 
 // 429, RESOURCE_EXHAUSTED, rate-limit → thử provider tiếp theo
 // 401, 400, 500 → lỗi thực sự, throw ngay
@@ -22,9 +32,13 @@ function isQuotaError(err: unknown): boolean {
 type TextProvider = { name: string; fn: (prompt: string) => Promise<string> }
 
 const TEXT_PROVIDERS: TextProvider[] = [
-  { name: 'gemini', fn: geminiText },
-  { name: 'groq',   fn: groqText   },
-  { name: 'cerebras', fn: cerebrasText },
+  { name: 'groq-1',      fn: groq1.generateContent },
+  { name: 'groq-2',      fn: groq2.generateContent },
+  { name: 'groq-3',      fn: groq3.generateContent },
+  { name: 'groq-4',      fn: groq4.generateContent },
+  { name: 'cerebras',    fn: cerebrasText           },
+  { name: 'gemini',      fn: geminiText             },
+  { name: 'gemini-pro',  fn: geminiProText          },
 ]
 
 export async function generateContent(prompt: string): Promise<string> {
@@ -47,11 +61,37 @@ export async function generateContent(prompt: string): Promise<string> {
   throw lastError
 }
 
-// Chỉ Gemini hỗ trợ multimodal — không fallback sang provider khác
+type ImageProvider = { name: string; fn: (prompt: string, img: string, mime: string) => Promise<string> }
+
+const IMAGE_PROVIDERS: ImageProvider[] = [
+  { name: 'groq-1',     fn: groq1.generateContentWithImage },
+  { name: 'groq-2',     fn: groq2.generateContentWithImage },
+  { name: 'groq-3',     fn: groq3.generateContentWithImage },
+  { name: 'groq-4',     fn: groq4.generateContentWithImage },
+  { name: 'gemini',     fn: geminiImage                    },
+  { name: 'gemini-pro', fn: geminiProImage                 },
+]
+
 export async function generateContentWithImage(
   prompt: string,
   base64Image: string,
   mimeType: string
 ): Promise<string> {
-  return geminiImage(prompt, base64Image, mimeType)
+  let lastError: unknown
+
+  for (const provider of IMAGE_PROVIDERS) {
+    try {
+      const result = await provider.fn(prompt, base64Image, mimeType)
+      return result
+    } catch (err) {
+      if (isQuotaError(err)) {
+        console.warn(`[ai.provider] ${provider.name} quota/rate-limit trên image, thử provider tiếp theo`)
+        lastError = err
+        continue
+      }
+      throw err
+    }
+  }
+
+  throw lastError
 }
