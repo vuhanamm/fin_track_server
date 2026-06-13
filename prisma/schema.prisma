@@ -13,7 +13,7 @@ model User {
   email          String?   @db.VarChar(255)
   plan           String    @default("free") @db.VarChar(10)
   plan_expires_at DateTime?
-  purchase_token String?   @db.VarChar(512)
+  purchase_token String?   @unique @db.VarChar(512)
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
 

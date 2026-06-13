@@ -36,6 +36,16 @@ export async function verifyAndUpgrade(
   }
 
   try {
+    const tokenOwner = await prisma.user.findFirst({
+      where: { purchase_token: purchaseToken },
+      select: { firebase_uid: true },
+    })
+
+    if (tokenOwner && tokenOwner.firebase_uid !== firebaseUid) {
+      console.warn('[subscription] Token already claimed by uid:', tokenOwner.firebase_uid)
+      return { success: false, reason: 'TOKEN_ALREADY_CLAIMED' }
+    }
+
     await prisma.user.upsert({
       where: { firebase_uid: firebaseUid },
       update: {
@@ -53,9 +63,9 @@ export async function verifyAndUpgrade(
     })
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err)
-    console.error('[subscription] DB upsert error:', err)
+    console.error('[subscription] DB error:', err)
     sendErrorAlert(
-      'DB upsert thất bại (DATABASE_ERROR)',
+      'DB error (DATABASE_ERROR)',
       `uid: ${firebaseUid}\ntoken: ${purchaseToken.slice(0, 30)}…\n\nLỗi:\n${detail}`
     )
     return { success: false, reason: 'DATABASE_ERROR' }
